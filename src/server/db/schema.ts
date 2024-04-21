@@ -13,16 +13,19 @@ import {
   mysqlEnum,
 } from "drizzle-orm/mysql-core";
 
+import type { AdapterAccount } from "next-auth/adapters";
+import { randomUUID } from "crypto";
+
 // notice how we are using a seperate table for users
-export const users = mysqlTable("users", {
-  id: varchar("id", { length: 255 }).notNull().primaryKey(),
-  name: varchar("name", { length: 256 }),
-  email: varchar("email", { length: 256 }),
-  password: varchar("password", { length: 256 }),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updatedAt").onUpdateNow(),
+export const users = mysqlTable("user", {
+  id: varchar("id", { length: 255 })
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  emailVerified: timestamp("emailVerified", { mode: "date", fsp: 3 }),
+  image: varchar("image", { length: 255 }),
+  password: varchar("password", { length: 255 }).notNull(),
 });
 
 export const oneTimeStripeCustomers = mysqlTable("one_time_stripe_customers", {
@@ -92,9 +95,9 @@ export const accounts = mysqlTable(
     userId: varchar("userId", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    //  type: varchar("type", { length: 255 })
-    //   .$type<AdapterAccount["type"]>()
-    //   .notNull(),
+    type: varchar("type", { length: 255 })
+      .$type<AdapterAccount["type"]>()
+      .notNull(),
     provider: varchar("provider", { length: 255 }).notNull(),
     providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
     refresh_token: varchar("refresh_token", { length: 255 }),
@@ -112,8 +115,11 @@ export const accounts = mysqlTable(
   }),
 );
 
-export const sessions = mysqlTable("session", {
-  sessionToken: varchar("sessionToken", { length: 255 }).notNull().primaryKey(),
+export const sessions = mysqlTable("session" as string, {
+  id: varchar("id", { length: 255 })
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  sessionToken: varchar("sessionToken", { length: 255 }).notNull().unique(),
   userId: varchar("userId", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
