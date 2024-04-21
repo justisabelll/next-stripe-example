@@ -8,5 +8,5 @@ export default {
   dbCredentials: {
     uri: env.DATABASE_URL,
   },
-  tablesFilter: ["next-stripe-example_*"],
+  out: "src/server/db/migrations",
 } satisfies Config;
