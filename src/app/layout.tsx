@@ -5,6 +5,7 @@ import { Toaster } from "~/components/ui/sonner";
 import { SignOut } from "~/components/signOut";
 
 import { auth } from "~/lib/auth";
+import { ThemeProvider, ThemeToggle } from "~/components/ui/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,8 +26,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${inter.variable}`}>
-        <Navbar />
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navbar />
+          {children}
+        </ThemeProvider>
         <Toaster />
       </body>
     </html>
@@ -37,9 +45,12 @@ const Navbar = async () => {
   const session = await auth();
 
   return (
-    <nav className=" flex items-center justify-between border-b  p-4">
+    <nav className=" border-muted flex items-center justify-between border-b p-4">
       <h1 className="text-2xl font-bold">Next Stripe Example</h1>
-      {session ? <SignOut /> : null}
+      <div className="flex gap-4">
+        {session ? <SignOut /> : null}
+        <ThemeToggle />
+      </div>
     </nav>
   );
 };

@@ -39,19 +39,30 @@ export default async function Home() {
 }
 
 const ExampleLinks = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
-  const examples = ["Subscription", "One Time Payment", "Usage"];
+  const exampleLinks = [
+    {
+      name: "Subscription",
+      path: "/subscription",
+    },
+    {
+      name: "One Time Payment",
+      path: "/one-time-payment",
+    },
+    {
+      name: "Usage",
+      path: "/usage",
+    },
+  ];
 
   return (
     <div className="">
-      {examples.map((example) => (
-        <div key={example}>
+      {exampleLinks.map((example) => (
+        <div key={example.name}>
           <button
             disabled={!isLoggedIn}
-            className="my-2 text-4xl text-blue-500 hover:underline disabled:pointer-events-none disabled:opacity-50"
+            className="text-primary my-2 text-4xl hover:underline disabled:pointer-events-none disabled:opacity-50"
           >
-            <Link href={`/${example.toLowerCase().replace(" ", "-")}`}>
-              {example}
-            </Link>
+            <Link href={example.path}>{example.name}</Link>
           </button>
         </div>
       ))}
