@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import { encode, decode } from "next-auth/jwt";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "src/server/db";
@@ -21,6 +20,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: "jwt",
   },
+  callbacks: {
+    jwt: ({ token, user }) => {
+      if (user) {
+        // User is available during sign-in
+        token.id = user.id;
+      }
+      return token;
+    },
+    session: ({ session, token }) => {
+      if (session?.user && typeof token.id === "string") {
+        session.user.id = token.id;
+      }
+      return session;
+    },
+  },
+
   providers: [
     Credentials({
       credentials: {
