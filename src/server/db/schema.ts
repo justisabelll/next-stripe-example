@@ -62,8 +62,8 @@ export const subcriptionStripeCustomers = mysqlTable(
     currentSubTier: mysqlEnum("current_sub_tier", [
       "none",
       "basic",
-      "premium",
-      "pro",
+      "essential",
+      "growth",
     ]).default("none"),
     currentSubStatus: mysqlEnum("current_sub_status", [
       "active",
