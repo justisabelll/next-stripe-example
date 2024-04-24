@@ -1,15 +1,102 @@
 import { Button } from "~/components/ui/button";
+import CheckoutButton from "~/components/checkoutButton";
+import PortalButton from "~/components/portalButton";
 import Link from "next/link";
+import { auth } from "~/lib/auth";
+import { db } from "~/server/db";
+import { eq } from "drizzle-orm";
+import { subcriptionStripeCustomers } from "~/server/db/schema";
+import { FeatureButtons } from "~/components/featuresButton";
 
-export default function Subscriptions() {
+interface Subscription {
+  name: string;
+  id: string;
+  stripePriceId: string;
+  price: { monthly: string; annually: string };
+  description: string;
+  features: string[];
+  callToAction: string;
+}
+
+const tiers = [
+  {
+    name: "Basic",
+    id: "tier-basic",
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID!,
+    price: { monthly: "$15", annually: "$12" },
+    description: "Everything necessary to get started.",
+    features: [
+      "Access to the basic button",
+      "Tell your friends",
+      "Bragging rights",
+    ],
+    callToAction: "Subscribe",
+  },
+  {
+    name: "Essential",
+    id: "tier-essential",
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_ESSENTIAL_PRICE_ID!,
+    price: { monthly: "$20", annually: "$18" },
+    description:
+      "Everything in Basic, plus essential tools for growing your business.",
+    features: [
+      "Access to the basic button",
+      "Access to the essential button",
+      "Tell your friends",
+      "Bragging rights",
+    ],
+    callToAction: "Subscribe",
+  },
+  {
+    name: "Growth",
+    id: "tier-growth",
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_GROWTH_PRICE_ID!,
+    price: { monthly: "$60", annually: "$48" },
+    description:
+      "Everything in Essential, plus collaboration tools and deeper insights.",
+    features: [
+      "Access to the basic button",
+      "Access to the essential button",
+      "Access to the growth button",
+      "Tell your friends",
+      "Bragging rights",
+    ],
+    callToAction: "Subscribe",
+  } as Subscription,
+];
+
+export default async function Subscriptions() {
+  const session = await auth();
+
+  const user =
+    session?.user?.email && session?.user?.id
+      ? { email: session.user.email, id: session.user.id }
+      : undefined;
+
+  const customer = await db
+    .select()
+    .from(subcriptionStripeCustomers)
+    .where(eq(subcriptionStripeCustomers.userId, user?.id ?? ""));
+
   return (
-    <div>
-      <Button
-        variant="link"
-        className="mb-4 pt-4 text-xl text-primary underline hover:text-primary/70"
-      >
-        <Link href="/">Back Home</Link>
-      </Button>
+    <div className="p-6">
+      <div className="mb-4 flex justify-between ">
+        <div>
+          <Button
+            variant="link"
+            className="text-xl underline hover:text-primary/70"
+          >
+            <Link href="/">Back Home</Link>
+          </Button>
+        </div>
+        <div>
+          <PortalButton
+            userId={user?.id ?? ""}
+            customerId={customer[0]?.stripeCustomerId ?? ""}
+          />
+        </div>
+      </div>
+
       <div className="py-12 sm:py-24">
         <div className="mx-auto max-w-4xl sm:text-center">
           <h2 className="text-base font-semibold leading-7 text-primary">
@@ -23,59 +110,28 @@ export default function Subscriptions() {
           Pressing any of the buttons below will take you to the respective plan
           payment page.
         </p>
-        <SubscriptionsPricing />
+        <SubscriptionsPricing user={user} />
       </div>
+      <div className="text-center text-xl font-semibold">
+        <p>Unlock full access to all features by subscribing now!</p>
+      </div>
+      <FeatureButtons
+        tier={tiers.map((tier) => tier.name)}
+        userSubscription={customer[0]?.currentSubTier ?? "none"}
+      />
     </div>
   );
 }
 
-const SubscriptionsPricing = () => {
-  const tiers = [
-    {
-      name: "Basic",
-      id: "tier-basic",
-      href: "#",
-      price: { monthly: "$15", annually: "$12" },
-      description: "Everything necessary to get started.",
-      features: [
-        "5 products",
-        "Up to 1,000 subscribers",
-        "Basic analytics",
-        "48-hour support response time",
-      ],
-    },
-    {
-      name: "Essential",
-      id: "tier-essential",
-      href: "#",
-      price: { monthly: "$30", annually: "$24" },
-      description:
-        "Everything in Basic, plus essential tools for growing your business.",
-      features: [
-        "25 products",
-        "Up to 10,000 subscribers",
-        "Advanced analytics",
-        "24-hour support response time",
-        "Marketing automations",
-      ],
-    },
-    {
-      name: "Growth",
-      id: "tier-growth",
-      href: "#",
-      price: { monthly: "$60", annually: "$48" },
-      description:
-        "Everything in Essential, plus collaboration tools and deeper insights.",
-      features: [
-        "Unlimited products",
-        "Unlimited subscribers",
-        "Advanced analytics",
-        "1-hour, dedicated support response time",
-        "Marketing automations",
-        "Custom reporting tools",
-      ],
-    },
-  ];
+const SubscriptionsPricing = async ({
+  user,
+  subscription,
+}: {
+  user: { email: string; id: string } | undefined;
+  subscription?: string;
+}) => {
+  const tierOrder = ["none", "basic", "essential", "growth"];
+
   return (
     <div className="">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -97,13 +153,17 @@ const SubscriptionsPricing = () => {
                 <p className="mt-3 text-sm leading-6 ">
                   {tier.price.annually} per month if paid annually
                 </p>
-                <a
-                  href={tier.href}
-                  aria-describedby={tier.id}
-                  className="mt-10 block rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold leading-6 shadow-sm hover:bg-primary/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                  Buy plan
-                </a>
+
+                <CheckoutButton
+                  isDiabled={
+                    tierOrder.indexOf(tier.name) <=
+                    tierOrder.indexOf(subscription!)
+                  }
+                  stripePriceId={tier.stripePriceId}
+                  tier={tier.name}
+                  label={tier.callToAction}
+                  user={user}
+                />
                 <p className="mt-10 text-sm font-semibold leading-6">
                   {tier.description}
                 </p>
