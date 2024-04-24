@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { users } from "~/server/db/schema";
 import { db } from "~/server/db";
+import { stripe } from "~/lib/stripe";
 
 export type AuthResponse = {
   message: string;
@@ -35,4 +36,13 @@ export async function SignUp(
   });
 
   return { message: "User created successfully. 🎉" };
+}
+
+export async function createPortalSession(customerId: string) {
+  const portalSession = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: "http://localhost:3000",
+  });
+
+  return { id: portalSession.id, url: portalSession.url };
 }
